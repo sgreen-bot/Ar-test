@@ -71,6 +71,9 @@ async function start(){
     const w=parseFloat(cv.style.width)||innerWidth,h=parseFloat(cv.style.height)||innerHeight;renderer.setSize(w,h,false)};   // match the drawing buffer to the stretched camera picture, or the booth renders at 300 x 150
   await new Promise((ok,no)=>{src.init(ok,e=>no(e));setTimeout(()=>no(new Error('camera timeout')),20000)}).catch(e=>{throw Object.assign(new Error('camera'),{cam:true,cause:e})});
   await new Promise(ok=>ctx.init(()=>{camera.projectionMatrix.copy(ctx.getProjectionMatrix());ok()}));
+  // The tracker's camera sees from 0.0001 to 1000 marker-widths, which leaves almost no depth precision: walls a few
+  // inches apart tear through each other. Keep its lens, but look only from 0.1 to 200 marker-widths.
+  {const P=camera.projectionMatrix.elements,n=.1,f=200;P[10]=-(f+n)/(f-n);P[14]=-2*f*n/(f-n);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()}
   fit();setTimeout(fit,600);setTimeout(fit,2000);addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,400));
   const tracked=new T3.Group();scene.add(tracked);
   new THREEx.ArMarkerControls(ctx,tracked,{type:'pattern',patternUrl:'marker.patt',changeMatrixMode:'modelViewMatrix',minConfidence:.99});   // registers the pattern; the pose is taken below
